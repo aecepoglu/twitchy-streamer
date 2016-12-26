@@ -10,25 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20161224162413) do
-
-  create_table "assets", force: :cascade do |t|
-    t.string   "path"
-    t.integer  "project_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.string   "file"
-    t.index ["project_id"], name: "index_assets_on_project_id"
-  end
-
-  create_table "project_files", force: :cascade do |t|
-    t.string   "path"
-    t.string   "url"
-    t.integer  "project_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["project_id"], name: "index_project_files_on_project_id"
-  end
+ActiveRecord::Schema.define(version: 20161223153444) do
 
   create_table "projects", force: :cascade do |t|
     t.string "title"

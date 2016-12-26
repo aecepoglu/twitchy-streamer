@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
-  get 'welcome/index'
-  get 'about' => 'pages#about'
+  get 'about' => 'welcome#about'
+  root 'welcome#index'
 
   scope '/api' do
     get '/version', to: 'version#list'#, controller: 'version'
@@ -19,6 +19,5 @@ Rails.application.routes.draw do
     end
   end
 
-  root "welcome#index"
   # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
 end
