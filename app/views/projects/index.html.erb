@@ -1,0 +1,11 @@
+<h3>This page will be removed</h3>
+
+<ul>
+  <% @projects.each do |proj| %>
+  <li>
+    <%= proj.title %>
+    <%= link_to "Show", project_path(proj) %>
+  </li>
+  <% end %>
+</ul>
+

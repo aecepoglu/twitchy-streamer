@@ -1,0 +1,22 @@
+<h3>Create New Project</h3>
+
+<%= form_for :project, url: projects_path do |f| %>
+  <div class="form-group <%= " has-error has-feedback" if @proj.errors[:title].any? %>" >
+    <%= f.label :title, class: "control-label" %>
+    <!--<input type="text" name="title" class="form-control"/>-->
+    <%= f.text_field :title, class: "form-control", value: @proj.title %>
+    <% if @proj.errors[:title].any? %>
+      <i class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></i>
+    <% end %>
+  </div>
+
+  <% if @proj.errors.any? %>
+    <div class="alert alert-danger"><ul>
+    <% @proj.errors.full_messages.each do |msg| %>
+      <li><%= msg %></li>
+    <% end %>
+    </ul></div>
+  <% end %>
+
+  <%= f.submit "Save", class: "btn btn-primary" %>
+<% end %>
