@@ -7,12 +7,11 @@ if ENV['RAILS_ENV'] == 'test'
     add_filter "/test/"
   end
 
-  SimpleCov.minimum_coverage_by_file 80
-
   if ENV['CODECOV_TOKEN']
     require 'codecov'
     SimpleCov.formatter = SimpleCov::Formatter::Codecov
   else
+    SimpleCov.minimum_coverage_by_file 75
     SimpleCov.formatter = SimpleCov::Formatter::HTMLFormatter
   end
 end
