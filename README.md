@@ -1,4 +1,5 @@
 ![codeship](https://codeship.com/projects/1002c4b0-aded-0134-02cb-42bf2211c7d1/status?branch=master)
+[![codecov](https://codecov.io/gh/aecepoglu/twitchy-streamer/branch/master/graph/badge.svg)](https://codecov.io/gh/aecepoglu/twitchy-streamer)
 
 # README
 
