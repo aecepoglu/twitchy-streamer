@@ -32,8 +32,13 @@
   <dd>If a project has been inactive for a while (2 days) it gets automatically purged.</dd>
 </dl>
 
-<div class="well">
-  <p>Developed by <i>AECepoglu</i>. Contact me at <%= mail_to "aecepoglu@fastmail.fm", "aecepoglu@fastmail.fm", encode: "javascript" %></p>
+<div class="well text-muted">
+  <p>Developed by <i>AECepoglu</i></p>
+  
+  <ul>
+    <li><%= mail_to "aecepoglu@fastmail.fm", "email me", encode: "javascript", class: "text-muted" %></li>
+    <li><a class="text-muted" href="https://github.com/aecepoglu/twitchy-streamer">view source code</a></li>
+  </ul>
 
-  <p><a href="">(TODO)pretty link to GitHub</a></p>
+  <p class="text-center"> v<%= @buildInfo[:version] %><span style="margin: 0 0.5em">|</span><%= @buildInfo[:date].to_s %></p>
 </div>

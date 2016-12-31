@@ -3,5 +3,6 @@ class WelcomeController < ApplicationController
   end
 
   def about
+    @buildInfo = Rails.configuration.build_info
   end
 end
