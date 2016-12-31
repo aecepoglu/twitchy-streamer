@@ -1,175 +1,257 @@
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.9.0/styles/solarized-dark.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.9.0/highlight.min.js"></script>
+
+
 <style>
-.clickable {
-  cursor: pointer
-}
-.hidden {
-  display: none
-}
+  pre {
+    border-color: #464545;
+    background-color: inherit;
+  }
+
+  .clickable {
+    cursor: pointer
+  }
+
+  .file-icon {
+    margin-right: 1em
+  }
+
+  .file-button {
+    margin-left: 0.5em;
+  }
+
+  .hidden {
+    display: none
+  }
+
+  .with-loading-anim {
+    position: relative;
+  }
+
+  .with-loading-anim .loading-anim {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 20px 0;
+    text-align: center;
+  
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+
+  .with-loading-anim.loading .contents {
+    min-height: 190px;
+  }
+
+  .with-loading-anim.loading .loading-anim {
+    opacity: 1;
+    transition: none;
+  }
 </style>
 
-<script type="text/javascript">
-  function hideChildren(elem, hide) {
-    var $elem = $(elem);
+<script>
+var $dir, $fileContainer, fileLabel;
+var currentFile;
 
-    elem.files.forEach(function(it) {
-      var $it = $(it);
+function buildFileItemId(dir, name) {
+  
+}
 
-      if (hide) {
-        $it.addClass("hidden");
-      } else {
-        $it.removeClass("hidden");
-      }
+function hideChildren(elem, hide) {
+  var $elem = $(elem);
 
-      if (it.files && (hide || $it.hasClass("dir-open"))) {
-        hideChildren(it, hide);
-      }
-    });
-  }
+  elem.files.forEach(function(it) {
+    var $it = $(it);
 
-  function toggleDir(elem) {
-    var $elem = $(elem)
-    var $icon = $elem.find(".glyphicon");
-
-    var isOpen = $elem.hasClass("dir-open");
-
-    if (isOpen) {
-      $elem.removeClass("dir-open");
-
-      $icon.addClass("glyphicon-folder-close");
-      $icon.removeClass("glyphicon-folder-open");
+    if (hide) {
+      $it.addClass("hidden");
     } else {
-      $elem.addClass("dir-open");
-
-      $icon.addClass("glyphicon-folder-open");
-      $icon.removeClass("glyphicon-folder-close");
+      $it.removeClass("hidden");
     }
 
-    hideChildren(elem, isOpen);
+    if (it.files && (hide || $it.hasClass("dir-open"))) {
+      hideChildren(it, hide);
+    }
+  });
+}
+
+function toggleDir(ev) {
+  var elem = this;
+  var $elem = $(elem)
+  var $icon = $elem.find(".glyphicon");
+
+  var isOpen = $elem.hasClass("dir-open");
+
+  if (isOpen) {
+    $elem.removeClass("dir-open");
+
+    $icon.addClass("glyphicon-folder-close");
+    $icon.removeClass("glyphicon-folder-open");
+  } else {
+    $elem.addClass("dir-open");
+
+    $icon.addClass("glyphicon-folder-open");
+    $icon.removeClass("glyphicon-folder-close");
   }
 
-  $(document).ready(function() {
-    $("#filelist").children().each(function(index ,it) {
-      if (it.dataset.parentId) {
-        var parentElem = document.getElementById(it.dataset.parentId)
+  hideChildren(elem, isOpen);
+}
 
-        if (!parentElem.files) {
-          parentElem.files = [];
+function openFile(file) {
+  if (!file && currentFile) {
+    file = currentFile;
+  } else {
+    currentFile = file;
+  }
+  
+  if (file.type) {
+    console.log("opening type", file.type);
+
+    var mediaType = file.type.slice("/")[0];
+
+    if (mediaType == "image") {
+      alert("TODO: open image");
+    } else if (mediaType == "text") {
+    }
+  }
+
+  var fileContents = $fileContainer.find(".contents")[0];
+
+  fileLabel.innerHTML = file.name;
+  document.title = file.name;
+  fileContents.innerHTML = "";
+
+  $(".file-control").each(function(i, it) {
+    $(it).removeClass("hidden");
+  });
+  $fileContainer.addClass("loading");
+
+  $.ajax({
+    method: "get",
+    url: file.url,
+    dataType: "text"
+  })
+  .done(function(data) {
+    fileContents.innerHTML = data;
+
+    fileContents.className = "contents highlight lang-" + file.ext;
+
+    hljs.highlightBlock(fileContents);
+  })
+  .fail(function(_, err) {
+    alert(err);
+  })
+  .always(function() {
+    $fileContainer.removeClass("loading");
+  });
+}
+
+function listFiles(projId) {
+  $dir.addClass("loading");
+
+  $.ajax({
+    method: "get",
+    url: "/projects/" + projId + "/dir"
+  })
+  .done(function(list) {
+    var activeItem;
+
+    list.forEach(function(it) {
+      var li = document.createElement("a");
+      li.className = "list-group-item clickable";
+      li.id = "p-" + (it.dir ? (it.dir + "/") : "") + it.name;
+
+      var label = document.createElement("span");
+      label.style.paddingLeft = (li.id.match(/\//g) || []).length * 2 + "em";
+
+      if (it.url) {
+        li.onclick = function() {
+          openFile(it);
+
+          if (activeItem) {
+            $(activeItem).removeClass("active");
+          }
+          li.className += " active";
+          activeItem = li;
         }
+      } else {
+        li.className += " dir-open";
+        li.onclick = toggleDir.bind(li);
+        li.files = [];
 
-        parentElem.files.push(it);
+        label.innerHTML = '<i class="glyphicon glyphicon-folder-open file-icon"></i>';
       }
+      
+      label.innerHTML += it.name;
+
+
+      if (it.dir) {
+        document.getElementById("p-" + it.dir).files.push(li);
+      }
+
+      li.appendChild(label);
+      $dir.append(li);
     });
+  })
+  .fail(function(err) {
+    if (err.status >= 500) {
+      //TODO notify me about this error
+      alert("Sorry...\n\nA server error has occured. The developer has been notified and this issue will be fixed shortly.");
+    } else {
+      console.error("an error occured.")
+      console.error(err.responseText);
+    };
+  })
+  .always(function() {
+    $dir.removeClass("loading");
+  });
+}
 
-    var cb = new Clipboard('.btn');
+$(document).ready(function() {
+  $dir = $("#dir");
+  $fileContainer = $("#file");
+  fileLabel = document.getElementById("fileLabel");
+  var projectId = "<%= @project.id.to_s %>";
 
-    cb.on('success', function(e) {
-      e.clearSelection();
-
-      var $trigger = $(e.trigger);
-      var backup = $trigger.html();
-
-      $trigger.html("copied");
-      $trigger.addClass("btn-success");
-
-      setTimeout(function() {
-        $trigger.removeClass("btn-success");
-        $trigger.html(backup);
-      }, 1000);
-    });
-  }
-);
+  listFiles(projectId);
+});
 </script>
 
-<h4>
-  <%= @project.title %>
-  <% if @currentFile %>
-    <short>:: <%= @currentFile %></short>
-  <% end %>
-</h4>
-
-<% if @currentFile %>
-  <pre class="highlight"><%= raw rouge @project.id, @currentFile %></pre>
+<% if @key %>
+  <%= render partial: "edit", locals: {key: @key, project: @project} %>
 <% end %>
 
-<% if @key 
-  @links = {
-    "Secret": @key,
-    "Publish": polymorphic_url(@project, :action => :sync) + "?key=" + @key,
-    "Manage": polymorphic_url(@project) + "?key=" + @key
-  }
-%>
-  <div class="panel panel-info">
-    <div class="panel-heading">Secret Links</div>
-    <div class="panel-body" style="position: relative">
-      <div style="top: 0; left: 0; right: 0; bottom: 0; position: absolute; z-index: 5; display: flex; align-items: center; justify-content: center; background-color: #222">
-        <button class="btn btn-default" onclick="this.parentNode.remove()">Show</button>
-      </div>
-      <form class="form-horizontal" action="javascript:void(0)">
-
-        <% @links.each do |name, value| %>
-          <div class="form-group">
-            <label class="control-label col-xs-12 col-sm-2"><%= name %></label>
-
-            <div class="input-group">
-              <input id="link-<%= name %>" type="text" class="form-control" value="<%= value %>" readonly/>
-
-              <span class="input-group-btn">
-                <button class="btn btn-default" data-clipboard-target="#link-<%= name %>">
-                  <i class="glyphicon glyphicon-copy"></i>
-                </button>
-              </span>
-
-            </div>
-
-          </div>
-        <% end %>
-
-        <div class="form-group">
-          <label class="control-label col-xs-12 col-sm-2">Combined</label>
-
-          <div class="input-group">
-            <textarea id="link-Combined" class="form-control" style="white-space: pre" readonly
-              rows="<%= @links.length + 1 %>"><%= @links.collect {
-                |x, y| (x.to_s + ": " + y.to_s)
-              }.join("\n") + "\n" %></textarea>
-
-            <span class="input-group-btn">
-              <button class="btn btn-default" data-clipboard-target="#link-Combined">
-                <i class="glyphicon glyphicon-copy"></i>
-              </button>
-            </span>
-
-          </div>
-        </div>
-
-      </form>
-    </div>
+<div>
+  <div class="pull-right hidden file-control">
+    <a class="glyphicon glyphicon-refresh file-button clickable" onclick="openFile()"></a>
+    <a href="#dir" class="glyphicon glyphicon-list file-button" data-turbolinks="false"></a>
   </div>
 
-<% end %>
+  <h4>
+    <%= @project.title %>
+    <small id="fileLabel"></small>
+  </h4>
+</div>
 
-<% if @showFiles %>
-  <div id="filelist" class="list-group">
-  <% listDirectory @project.id  do |f| %>
-    <a class="list-group-item clickable dir-open <%= "active" if f[:path] == @currentFile %>" style="padding-left: <%= f[:level] * 2 %>em"
-      id="p<%= f[:path] %>" 
-      <% if f[:dir] %>data-parent-id="p<%= f[:dir] %>"<% end %>
-      <% if f[:isDir] %>
-        onclick="toggleDir(this)"
-      <% else %>
-        href="<%= project_path %>?file=<%= f[:path] %>" target="_blank"
-      <% end %>
-    >
-      <% if f[:isDir] %>
-        <i class="glyphicon glyphicon-folder-open" style="margin-right: 0.5em"></i> 
-      <% end %>
+<div id="file" class="hidden file-control with-loading-anim">
+  <pre class="contents">
+  </pre>
 
-      <%= f[:name] %>
-    </a>
-  <% end %>
+  <div class="loading-anim">
+    <%= image_tag "spinner.svg" %>
   </div>
-<% end %>
+</div>
 
-<% if @file %>
-  
-<% end %>
+<div id="dir" class="list-group with-loading-anim">
+  <a name="dir"></a>
+
+  <div class="contents">
+  </div>
+
+  <div class="loading-anim">
+    <%= image_tag "spinner.svg" %>
+  </div>
+</div>

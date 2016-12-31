@@ -1,11 +1,11 @@
 require "fileutils"
 require "find"
 require "securerandom"
-require "rouge"
+require "mime/types"
+require "s3_client"
 
 class ProjectsController < ApplicationController
   protect_from_forgery except: :sync
-  helper_method :listDirectory, :rouge
 
   def index
     @projects = Project.all()
@@ -17,8 +17,6 @@ class ProjectsController < ApplicationController
 
   def create
     secret = SecureRandom.urlsafe_base64(16)
-
-    puts "######## secret: " + secret
 
     @proj = Project.new(
       params.require(:project)
@@ -33,52 +31,53 @@ class ProjectsController < ApplicationController
     end
   end
 
-  def listDirectory(projId)
-    Dir.chdir("/tmp/filestream/#{projId}") do
-      Find.find("./") do |path|
-        if path != "./"
-          list = path[2..-1].split("/")
-  
-          obj = {
-            :name => list[-1],
-            :level => list.length,
-            :path => list.join("/"),
-            :isDir => FileTest.directory?(path)
-          }
-
-          if (list.length > 1)
-            obj[:dir] = list[0..-2].join("/")
-          end
-  
-          yield obj
-        end
-      end
-    end
-  end
-
-  def rouge(projId, filepath)
-    text = File.read(File.join("/tmp/filestream", projId.to_s, filepath))
-
-    formatter = Rouge::Formatters::HTML.new
-
-    lexer = Rouge::Lexer.guess({:filename => filepath})
-
-    formatter.format(lexer.lex(text))
-  end
-
   def show
     @project = Project.find(params[:id])
 
     if params.has_key?("key")
       @key = params[:key]
     end
+  end
 
-    if params.has_key?("file")
-      @currentFile = params[:file]
-      @pageTitle = @currentFile
+  def dir
+    s3 = MyS3Client.get
+
+    prefix = params[:id].to_s
+    resp = s3.list_objects_v2({
+      bucket: MyS3Client.bucketName,
+      prefix: prefix
+    })
+
+    files = []
+    bucketUrl = MyS3Client.bucketUrl
+
+    resp.contents.each do |x|
+      path = x.key[(prefix.length + 1)..-1]
+
+      if path == ""
+        next
+      end
+
+      dir = File.dirname(path)
+
+      file = {
+        name: File.basename(path),
+        dir: dir == "." ? nil : dir
+      }
+
+      if path[-1] != "/"
+        ext = File.extname(path)[1..-1] || ""
+        types = MIME::Types.type_for(ext)
+
+        file["url"] = bucketUrl + "/" + x.key
+        file["ext"] = ext
+        file["type"] = types.length >= 1 ? types[0].to_s : "text/plain"
+      end
+
+      files.push(file)
     end
 
-    @showFiles = true
+    render json: files
   end
 
   def respondNotFound

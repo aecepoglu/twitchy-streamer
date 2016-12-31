@@ -1,0 +1,76 @@
+<script type="text/javascript">
+  $(document).ready(function() {
+    var cb = new Clipboard('.btn');
+
+    cb.on('success', function(e) {
+      e.clearSelection();
+
+      var $trigger = $(e.trigger);
+      var backup = $trigger.html();
+
+      $trigger.html("copied");
+      $trigger.addClass("btn-success");
+
+      setTimeout(function() {
+        $trigger.removeClass("btn-success");
+        $trigger.html(backup);
+      }, 1000);
+    });
+  }
+);
+</script>
+
+<% @links = {
+    "Secret": @key,
+    "Publish": polymorphic_url(@project, :action => :sync) + "?key=" + @key,
+    "Manage": polymorphic_url(@project) + "?key=" + @key
+  }
+%>
+
+<div class="panel panel-info">
+  <div class="panel-heading">Secret Links</div>
+  <div class="panel-body" style="position: relative">
+    <div style="top: 0; left: 0; right: 0; bottom: 0; position: absolute; z-index: 5; display: flex; align-items: center; justify-content: center; background-color: #222">
+      <button class="btn btn-default" onclick="this.parentNode.remove()">Show</button>
+    </div>
+    <form class="form-horizontal" action="javascript:void(0)">
+
+      <% @links.each do |name, value| %>
+        <div class="form-group">
+          <label class="control-label col-xs-12 col-sm-2"><%= name %></label>
+
+          <div class="input-group">
+            <input id="link-<%= name %>" type="text" class="form-control" value="<%= value %>" readonly/>
+
+            <span class="input-group-btn">
+              <button class="btn btn-default" data-clipboard-target="#link-<%= name %>">
+                <i class="glyphicon glyphicon-copy"></i>
+              </button>
+            </span>
+
+          </div>
+
+        </div>
+      <% end %>
+
+      <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">Combined</label>
+
+        <div class="input-group">
+          <textarea id="link-Combined" class="form-control" style="white-space: pre" readonly
+            rows="<%= @links.length + 1 %>"><%= @links.collect {
+              |x, y| (x.to_s + ": " + y.to_s)
+            }.join("\n") + "\n" %></textarea>
+
+          <span class="input-group-btn">
+            <button class="btn btn-default" data-clipboard-target="#link-Combined">
+              <i class="glyphicon glyphicon-copy"></i>
+            </button>
+          </span>
+
+        </div>
+      </div>
+
+    </form>
+  </div>
+</div>

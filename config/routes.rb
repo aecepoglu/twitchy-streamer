@@ -12,10 +12,9 @@ Rails.application.routes.draw do
   end
 
   resources :projects do
-    resources :assets
-
     member do
       post "sync"
+      get "dir"
     end
   end
 
