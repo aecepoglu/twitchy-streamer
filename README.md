@@ -1,27 +1,42 @@
-![codeship](https://codeship.com/projects/1002c4b0-aded-0134-02cb-42bf2211c7d1/status?branch=master)
+[![Codeship Status for aecepoglu/twitchy-streamer](https://app.codeship.com/projects/1002c4b0-aded-0134-02cb-42bf2211c7d1/status?branch=master)](https://app.codeship.com/projects/192582)
 [![codecov](https://codecov.io/gh/aecepoglu/twitchy-streamer/branch/master/graph/badge.svg)](https://codecov.io/gh/aecepoglu/twitchy-streamer)
 
 # README
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
 
-Things you may want to cover:
+### Configuration
 
-* Ruby version
+* `AWS_REGION` - required
+* `AWS_ACCESS_KEY_ID` - required
+* `AWS_SECRET_ACCESS_KEY` - required
+* `CODECOV_TOKEN` - optional. If exists pushes to codecov
+
+Rails v5.0
+
+### To Start
+
+    rails server
+
+### To Test
+
+    rails test
+
+### Development
+
+Change your .git/hooks/pre-commit to this
+
+    exec hooks/pre-commit.sh
+
+And commit like this to update build info (`build_info.yml`)
+
+    BUILDINFO=yes git commit ...
+
+#TODO
 
 * System dependencies
-
-* Configuration
+* Ruby
 
 * Database creation
-
 * Database initialization
 
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
 * Deployment instructions
-
-* ...

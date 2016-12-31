@@ -1,5 +1,3 @@
-require "fileutils"
-require "find"
 require "securerandom"
 require "mime/types"
 require "s3_client"
@@ -80,42 +78,45 @@ class ProjectsController < ApplicationController
     render json: files
   end
 
-  def respondNotFound
-    render plain: "no such record", status: 404
-    return
-  end
-
   def sync
     begin
       project = Project.find(params[:id])
     rescue ActiveRecord::RecordNotFound
-      return respondNotFound
+      render plain: "no such record", status: 404
+      return
     end
 
     if not project.authenticate(params[:key])
-      logger.info "unauth access to project-#{params[:project_id]} by #{request.remote_ip}"
-      return respondNotFound
+      logger.info "unauth access to project-#{params[:id]} by #{request.remote_ip}"
+      render plain: "no such record", status: 404
+      return
     end
-
-    params.each { |x,y| puts(x + " : " + y.to_s) }
 
     if not params.has_key?(:file) or not params.has_key?(:dir)
       render plain: "file and dir params required", status: 400
       return
     elsif params[:dir].include? ".."
-      render plain: "bad dir value", status: 400
+      render plain: "you may not access other folders", status: 403
       return
     end
 
+    s3 = MyS3Client.get
     file = params[:file]
-    targetDir = File.join(
-      "/tmp/filestream",
-      project.id.to_s,
-      params[:dir]
-    )
-     
-    FileUtils.mkdir_p(targetDir)
-    FileUtils.mv(file.tempfile.path, File.join(targetDir, file.original_filename))
+
+    begin
+      File.open file.tempfile.path do |fp|
+        s3.put_object({
+          acl: "public-read",
+          bucket: MyS3Client.bucketName,
+          key: File.join(project.id.to_s, params[:dir], file.original_filename),
+          body: fp
+        })
+      end
+    rescue => e
+      logger.error e
+      render plain: "aws upload error", status: 500
+      return
+    end
 
     render plain: "ok"
   end
