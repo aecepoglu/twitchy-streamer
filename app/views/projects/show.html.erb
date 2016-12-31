@@ -55,6 +55,8 @@
 <script>
 var $dir, $fileContainer, fileLabel;
 var currentFile;
+var activeItem; //currently selected dir item
+
 
 function buildFileItemId(dir, name) {
   
@@ -149,6 +151,55 @@ function openFile(file) {
   });
 }
 
+function addDirEntry(it) {
+  var li = document.createElement("a");
+  li.className = "list-group-item clickable";
+  li.id = "p-" + (it.dir ? (it.dir + "/") : "") + it.name;
+
+  var label = document.createElement("span");
+  label.style.paddingLeft = (li.id.match(/\//g) || []).length * 2 + "em";
+
+  if (it.url) {
+    li.onclick = function() {
+      openFile(it);
+
+      if (activeItem) {
+        $(activeItem).removeClass("active");
+      }
+      li.className += " active";
+      activeItem = li;
+    }
+  } else {
+    li.className += " dir-open";
+    li.onclick = toggleDir.bind(li);
+    li.files = [];
+
+    label.innerHTML = '<i class="glyphicon glyphicon-folder-open file-icon"></i>';
+  }
+  
+  label.innerHTML += it.name;
+
+  if (it.dir) {
+    var itsParent = document.getElementById("p-" + it.dir);
+
+    if (!itsParent) {
+      tokenList = it.dir.split("/");
+
+      itsParent = addDirEntry({
+            name: tokenList[tokenList.length -1],
+            dir: tokenList.slice(0, tokenList.length -1).join("/"),
+      });
+    }
+
+    itsParent.files.push(li);
+  }
+
+  li.appendChild(label);
+  $dir.append(li);
+
+  return li;
+}
+
 function listFiles(projId) {
   $dir.addClass("loading");
 
@@ -157,44 +208,7 @@ function listFiles(projId) {
     url: "/projects/" + projId + "/dir"
   })
   .done(function(list) {
-    var activeItem;
-
-    list.forEach(function(it) {
-      var li = document.createElement("a");
-      li.className = "list-group-item clickable";
-      li.id = "p-" + (it.dir ? (it.dir + "/") : "") + it.name;
-
-      var label = document.createElement("span");
-      label.style.paddingLeft = (li.id.match(/\//g) || []).length * 2 + "em";
-
-      if (it.url) {
-        li.onclick = function() {
-          openFile(it);
-
-          if (activeItem) {
-            $(activeItem).removeClass("active");
-          }
-          li.className += " active";
-          activeItem = li;
-        }
-      } else {
-        li.className += " dir-open";
-        li.onclick = toggleDir.bind(li);
-        li.files = [];
-
-        label.innerHTML = '<i class="glyphicon glyphicon-folder-open file-icon"></i>';
-      }
-      
-      label.innerHTML += it.name;
-
-
-      if (it.dir) {
-        document.getElementById("p-" + it.dir).files.push(li);
-      }
-
-      li.appendChild(label);
-      $dir.append(li);
-    });
+    list.forEach(addDirEntry);
   })
   .fail(function(err) {
     if (err.status >= 500) {
