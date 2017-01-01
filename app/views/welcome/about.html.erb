@@ -40,5 +40,9 @@
     <li><a class="text-muted" href="https://github.com/aecepoglu/twitchy-streamer">view source code</a></li>
   </ul>
 
-  <p class="text-center"> v<%= @buildInfo[:version] %><span style="margin: 0 0.5em">|</span><%= @buildInfo[:date].to_s %></p>
+  <p class="text-center">
+    v<%= @buildInfo[:version] %>
+    <span class="small"><%= @buildInfo[:version_extra] %></span>
+    <span style="margin: 0 0.5em">|</span>
+    <%= @buildInfo[:date].to_s %></p>
 </div>
