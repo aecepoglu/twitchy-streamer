@@ -30,7 +30,7 @@ class ProjectsController < ApplicationController
         .merge({:password => secret})
     )
 
-    if @proj.save() then
+    if @proj.save()
       redirect_to(action: "show", id: @proj.hashid, key: secret)
     else
       render "new"
@@ -59,7 +59,7 @@ class ProjectsController < ApplicationController
     rescue Aws::Errors::MissingRegionError,
         Aws::Errors::MissingCredentialsError,
         Aws::Errors::ServiceError => e
-      logger.error e
+      logger.tagged("aws") { logger.error e }
       render plain: "aws error", status: 500
       return
     end
@@ -97,7 +97,7 @@ class ProjectsController < ApplicationController
   end
 
   def sync_create(s3, params, project)
-    unless params.has_key?(:file) then
+    unless params.has_key?(:file)
       raise MyError, "file parameter is required for create method"
     end
 
@@ -113,15 +113,36 @@ class ProjectsController < ApplicationController
     end
   end
 
-  def sync_remove(s3, params, project)
-    raise MyError, "not implemented"
+  def sync_delete(s3, params, project)
+    s3.delete_object({
+      bucket: MyS3Client.bucketName,
+      key: File.join(project.hashid.to_s, params[:destination])
+    })
   end
 
   def sync_move(s3, params, project)
-    raise MyError, "not implemented"
+    unless params.has_key?(:source)
+      raise MyError, "'source' parameter is required for 'move' method"
+    end
+
+    s3.copy_object({
+      acl: "public-read",
+      bucket: MyS3Client.bucketName,
+      copy_source: File.join(MyS3Client.bucketName, project.hashid.to_s, params[:source]),
+      key: File.join(project.hashid.to_s, params[:destination])
+    })
+
+    s3.delete_object({
+      bucket: MyS3Client.bucketName,
+      key: File.join(project.hashid.to_s, params[:source])
+    })
   end
 
   def sync
+    logger.tagged("sync") {
+      logger.info params.permit(:id, :method, :source, :destination).inspect
+    }
+
     begin
       project = Project.find(params[:id])
     rescue ActiveRecord::RecordNotFound, Hashids::InputError
@@ -130,7 +151,7 @@ class ProjectsController < ApplicationController
     end
 
     unless project.authenticate(params[:key])
-      logger.info "unauth access to project-#{params[:id]} by #{request.remote_ip}"
+      logger.warn "unauth-access project=#{params[:id]} ip=#{request.remote_ip}"
       render plain: "no such record", status: 404
       return
     end
@@ -139,7 +160,8 @@ class ProjectsController < ApplicationController
       render plain: "destination param is required", status: 400
       return
     elsif params[:destination].include? ".." or
-        (params.has_key?(:source) and params[:source].include? "..") then
+        (params.has_key?(:source) and params[:source].include? "..")
+      logger.warn "malicious-access project=#{request.remote_ip}"
       render plain: "malicious folder access", status: 403
       return
     end
@@ -150,19 +172,23 @@ class ProjectsController < ApplicationController
       case params[:method]
         when "create"
           sync_create(s3, params, project)
-        when "remove"
-          sync_remove(s3, params, project)
+        when "delete"
+          sync_delete(s3, params, project)
         when "move"
           sync_move(s3, params, project)
         else
-          render plain: "method parameter must be one of create, remove or move", status: 400
+          render plain: "method parameter must be either 'create', 'delete' or 'move'", status: 400
           return
       end
     rescue MyError => e
       render plain: e, status: 400
       return
+    rescue Aws::S3::Errors::NoSuchKey => e
+      logger.tagged("aws") { logger.error e }
+      render plain: "sync error with aws", status: 404
+      return
     rescue Aws::Errors::ServiceError => e
-      logger.error e
+      logger.tagged("aws") { logger.error e }
       render plain: "aws error", status: 500
       return
     end

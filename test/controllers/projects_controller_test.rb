@@ -5,14 +5,42 @@ require 'aws-sdk'
 require 'delegate'
 
 class MockedS3Client < DelegateClass(Aws::S3::Client)
+  @@call_args = []
+
   def initialize(x)
     super(x)
   end
 
   def list_objects_v2(props)
-    throw "this is another error" if props[:prefix] != "my-proj-id"
-
+    @@call_args.push [:list_objects_v2, [props]]
     super props
+  end
+
+  def put_object(props)
+    @@call_args.push [:put_object, [props]]
+    super props
+  end
+
+  def copy_object(props)
+    @@call_args.push [:copy_object, [props]]
+    super props
+  end
+
+  def delete_object(props)
+    @@call_args.push [:delete_object, [props]]
+    super props
+  end
+
+  def _args_for(methodName)
+    return @@call_args.select { |x|
+      x[0] == methodName
+    }.collect { |x|
+      x[1]
+    }
+  end
+
+  def _reset_calls!
+    @@call_args.clear
   end
 end
 
@@ -28,6 +56,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
 
   def teardown
     ENV.delete("AWS_REGION")
+    @s3._reset_calls!
   end
 
   test "dir should list files successfully" do
@@ -59,7 +88,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "sync should upload file to S3" do
+  test "sync:should upload file to S3" do
     MyS3Client.stub :get, @s3 do
       @s3.stub_responses(:put_object, {
         etag: "some-etag-value"
@@ -77,7 +106,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "sync should 400 if method is not given" do
+  test "sync:should 400 if method is not given" do
     post sync_project_path(id: @projId), params: {
       key: "password-two",
       destination: "sample.js",
@@ -87,8 +116,8 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response 400
   end
 
-  ["create", "remove", "move"].each do |method|
-    test "sync #{method} should 404 if project can't be found" do
+  ["create", "delete", "move"].each do |method|
+    test "sync:#{method} should 404 if project can't be found" do
       post sync_project_path(id: "nonexistent-id"), params: {
         method: method,
         key: "password-two",
@@ -99,7 +128,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       assert_response :missing
     end
 
-    test "sync #{method} should 404 if key is wrong" do
+    test "sync:#{method} should 404 if key is wrong" do
       post sync_project_path(id: @projId), params: {
         method: method,
         key: "wrong password",
@@ -110,7 +139,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       assert_response :missing
     end
 
-    test "sync #{method} should 403 if destination contains '..'" do
+    test "sync:#{method} should 403 if destination contains '..'" do
       post sync_project_path(id: @projId), params: {
         method: method,
         key: "password-two",
@@ -123,7 +152,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       assert_response 403
     end
 
-    test "sync #{method} should 400 if destination parameter is not given" do
+    test "sync:#{method} should 400 if destination parameter is not given" do
       post sync_project_path(id: @projId), params: {
         method: "create",
         key: "password-two",
@@ -134,17 +163,17 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "sync create should 400 if file parameter is not given" do
+  test "sync:create should 400 if file parameter is not given" do
       post sync_project_path(id: @projId), params: {
         method: "create",
         key: "password-two",
         destination: "sample.js"
       }
 
-      assert_response(400)
+      assert_response 400
   end
 
-  test "sync should 500 if s3 upload failed" do
+  test "sync:create should 500 if s3 upload failed" do
     MyS3Client.stub :get, @s3 do
       @s3.stub_responses(:put_object, "an error")
 
@@ -158,5 +187,96 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :error
     assert_equal "aws error", @response.body
+  end
+
+  test "sync:move should 400 if source parameter is not given" do
+    post sync_project_path(id: @projId), params: {
+      method: "move",
+      key: "password-two",
+      destination: "path/to/new-sample.js",
+    }
+
+    assert_response 400
+  end
+
+  test "sync:move should 403 if source parameter contains .." do
+    post sync_project_path(id: @projId), params: {
+      method: "move",
+      key: "password-two",
+      source: "../another-project/file.js",
+      destination: "file.js"
+    }
+
+    assert_response 403
+  end
+
+  test "sync:move should copy item to new location and remove the old one" do
+    MyS3Client.stub :get, @s3 do
+      post sync_project_path(id: @projId), params: {
+        method: "move",
+        key: "password-two",
+        source: "old-sample.js",
+        destination: "path/to/new-sample.js"
+      }
+    end
+
+    assert_response :success
+
+    assert_equal({
+      acl: "public-read",
+      bucket: "twitchy-streamer",
+      key: @projId.to_s + "/path/to/new-sample.js",
+      copy_source: "twitchy-streamer/#{@projId.to_s}/old-sample.js"
+    }, @s3._args_for(:copy_object)[0][0])
+
+    assert_equal({
+      bucket: "twitchy-streamer",
+      key: @projId.to_s + "/old-sample.js",
+    }, @s3._args_for(:delete_object)[0][0])
+  end
+
+  test "sync:move should 404 if source doesn't exist" do
+    MyS3Client.stub :get, @s3 do
+      @s3.stub_responses(:copy_object, "NoSuchKey")
+
+      post sync_project_path(id: @projId), params: {
+        method: "move",
+        key: "password-two",
+        source: "source.txt",
+        destination: "destination.txt"
+      }
+
+      assert_response 404
+    end
+  end
+
+  test "sync:delete should delete the given item" do
+    MyS3Client.stub :get, @s3 do
+      post sync_project_path(id: @projId), params: {
+        method: "delete",
+        key: "password-two",
+        destination: "file.txt"
+      }
+    end
+
+    assert_response :success
+
+    assert_equal({
+      bucket: "twitchy-streamer",
+      key: @projId.to_s + "/file.txt",
+    }, @s3._args_for(:delete_object)[0][0])
+  end
+
+  test "sync:delete should 404 if given item doesn't exist" do
+    MyS3Client.stub :get, @s3 do
+      @s3.stub_responses(:delete_object, "NoSuchKey")
+
+      post sync_project_path(id: @projId), params: {
+        method: "delete",
+        destinatio: "file.txt"
+      }
+
+      assert_response 404
+    end
   end
 end

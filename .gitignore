@@ -21,3 +21,5 @@
 
 # ignore test outputs
 /coverage
+
+/config/build_info.yml
