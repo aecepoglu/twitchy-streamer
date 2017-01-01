@@ -16,11 +16,11 @@ class S3ClientTest < ActiveSupport::TestCase
       "AWS_ACCESS_KEY_ID",
       "AWS_SECRET_ACCESS_KEY",
       "AWS_BUCKET"
-    ].each { |x| ENV[x] = nil }
+    ].each { |x| ENV.delete(x) }
   end
 
   test ".get returns new s3 client" do
-    s3 = MyS3Client.get
+    s3 = MyS3Client.get true
 
     assert s3.is_a? Aws::S3::Client
 

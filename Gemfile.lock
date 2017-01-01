@@ -71,6 +71,10 @@ GEM
     ffi (1.9.14)
     globalid (0.3.7)
       activesupport (>= 4.1.0)
+    hashid-rails (0.5.0)
+      activerecord (>= 4.0)
+      hashids (~> 1.0)
+    hashids (1.0.2)
     i18n (0.7.0)
     jbuilder (2.6.1)
       activesupport (>= 3.0.0, < 5.1)
@@ -84,6 +88,10 @@ GEM
     listen (3.0.8)
       rb-fsevent (~> 0.9, >= 0.9.4)
       rb-inotify (~> 0.9, >= 0.9.7)
+    lograge (0.4.1)
+      actionpack (>= 4, < 5.1)
+      activesupport (>= 4, < 5.1)
+      railties (>= 4, < 5.1)
     loofah (2.0.3)
       nokogiri (>= 1.5.9)
     mail (2.6.4)
@@ -185,9 +193,11 @@ DEPENDENCIES
   byebug
   codecov
   coffee-rails (~> 4.2)
+  hashid-rails
   jbuilder (~> 2.5)
   jquery-rails
   listen (~> 3.0.5)
+  lograge
   pg
   puma (~> 3.0)
   rails (~> 5.0.0, >= 5.0.0.1)

@@ -3,8 +3,8 @@ require 'aws-sdk'
 module MyS3Client
   @@client = nil
 
-  def self.get
-    if not @@client
+  def self.get(alwaysCreateNew = false)
+    if not @@client or alwaysCreateNew
       @@client = Aws::S3::Client.new()
     end
     

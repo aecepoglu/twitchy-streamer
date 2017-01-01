@@ -2,6 +2,14 @@ require "securerandom"
 require "mime/types"
 require "s3_client"
 
+class MyError < StandardError
+  attr_reader :object
+
+  def initialize(object)
+    @object = object
+  end
+end
+
 class ProjectsController < ApplicationController
   protect_from_forgery except: :sync
 
@@ -23,14 +31,14 @@ class ProjectsController < ApplicationController
     )
 
     if @proj.save() then
-      redirect_to(action: "show", id: @proj.id, key: secret)
+      redirect_to(action: "show", id: @proj.hashid, key: secret)
     else
       render "new"
     end
   end
 
   def show
-    @project = Project.find(params[:id])
+    @project = Project.find_by_hashid(params[:id])
 
     if params.has_key?("key")
       @key = params[:key]
@@ -38,13 +46,23 @@ class ProjectsController < ApplicationController
   end
 
   def dir
-    s3 = MyS3Client.get
+    resp = nil
 
-    prefix = params[:id].to_s
-    resp = s3.list_objects_v2({
-      bucket: MyS3Client.bucketName,
-      prefix: prefix
-    })
+    begin
+      s3 = MyS3Client.get
+
+      prefix = params[:id].to_s
+      resp = s3.list_objects_v2({
+        bucket: MyS3Client.bucketName,
+        prefix: prefix
+      })
+    rescue Aws::Errors::MissingRegionError,
+        Aws::Errors::MissingCredentialsError,
+        Aws::Errors::ServiceError => e
+      logger.error e
+      render plain: "aws error", status: 500
+      return
+    end
 
     files = []
     bucketUrl = MyS3Client.bucketUrl
@@ -78,43 +96,74 @@ class ProjectsController < ApplicationController
     render json: files
   end
 
+  def sync_create(s3, params, project)
+    unless params.has_key?(:file) then
+      raise MyError, "file parameter is required for create method"
+    end
+
+    file = params[:file]
+
+    File.open file.tempfile.path do |fp|
+      s3.put_object({
+        acl: "public-read",
+        bucket: MyS3Client.bucketName,
+        key: File.join(project.hashid.to_s, params[:destination]),
+        body: fp
+      })
+    end
+  end
+
+  def sync_remove(s3, params, project)
+    raise MyError, "not implemented"
+  end
+
+  def sync_move(s3, params, project)
+    raise MyError, "not implemented"
+  end
+
   def sync
     begin
       project = Project.find(params[:id])
-    rescue ActiveRecord::RecordNotFound
+    rescue ActiveRecord::RecordNotFound, Hashids::InputError
       render plain: "no such record", status: 404
       return
     end
 
-    if not project.authenticate(params[:key])
+    unless project.authenticate(params[:key])
       logger.info "unauth access to project-#{params[:id]} by #{request.remote_ip}"
       render plain: "no such record", status: 404
       return
     end
 
-    if not params.has_key?(:file) or not params.has_key?(:dir)
-      render plain: "file and dir params required", status: 400
+    if not params.has_key?(:destination)
+      render plain: "destination param is required", status: 400
       return
-    elsif params[:dir].include? ".."
-      render plain: "you may not access other folders", status: 403
+    elsif params[:destination].include? ".." or
+        (params.has_key?(:source) and params[:source].include? "..") then
+      render plain: "malicious folder access", status: 403
       return
     end
 
-    s3 = MyS3Client.get
-    file = params[:file]
-
     begin
-      File.open file.tempfile.path do |fp|
-        s3.put_object({
-          acl: "public-read",
-          bucket: MyS3Client.bucketName,
-          key: File.join(project.id.to_s, params[:dir], file.original_filename),
-          body: fp
-        })
+      s3 = MyS3Client.get
+
+      case params[:method]
+        when "create"
+          sync_create(s3, params, project)
+        when "remove"
+          sync_remove(s3, params, project)
+        when "move"
+          sync_move(s3, params, project)
+        else
+          render plain: "method parameter must be one of create, remove or move", status: 400
+          return
       end
-    rescue => e
+    rescue MyError => e
+      render plain: e, status: 400
+      return
+    rescue Aws::Errors::ServiceError => e
       logger.error e
-      render plain: "aws upload error", status: 500
+      render plain: "aws error", status: 500
       return
     end
 

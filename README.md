@@ -21,22 +21,13 @@ Rails v5.0
 
     rails test
 
-### Development
+### Deployment
 
-Change your .git/hooks/pre-commit to this
-
-    exec hooks/pre-commit.sh
-
-And commit like this to update build info (`build_info.yml`)
-
-    BUILDINFO=yes git commit ...
+Deployment is automated via codeship. Pushes to master branch get published.
 
 #TODO
 
 * System dependencies
 * Ruby
-
 * Database creation
 * Database initialization
-
-* Deployment instructions

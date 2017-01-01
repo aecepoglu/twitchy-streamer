@@ -228,7 +228,7 @@ $(document).ready(function() {
   $dir = $("#dir");
   $fileContainer = $("#file");
   fileLabel = document.getElementById("fileLabel");
-  var projectId = "<%= @project.id.to_s %>";
+  var projectId = "<%= @project.hashid.to_s %>";
 
   listFiles(projectId);
 });
