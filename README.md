@@ -25,6 +25,10 @@ Rails v5.0
 
 Deployment is automated via codeship. Pushes to master branch get published.
 
+Older projects need to be purged regularly, so this needs to be ran at least daily:
+
+    rails runner ProjectsCleanupJob
+
 #TODO
 
 * System dependencies

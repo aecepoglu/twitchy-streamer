@@ -39,7 +39,8 @@
     text-align: center;
   
     opacity: 0;
-    transition: opacity 0.5s;
+    visibility: hidden;
+    transition: visibility 0s linear 0.5s, opacity 0.5s;
   }
 
   .with-loading-anim.loading .contents {
@@ -47,6 +48,7 @@
   }
 
   .with-loading-anim.loading .loading-anim {
+    visibility: visible;
     opacity: 1;
     transition: none;
   }
@@ -108,47 +110,49 @@ function openFile(file) {
   } else {
     currentFile = file;
   }
-  
-  if (file.type) {
-    console.log("opening type", file.type);
-
-    var mediaType = file.type.slice("/")[0];
-
-    if (mediaType == "image") {
-      alert("TODO: open image");
-    } else if (mediaType == "text") {
-    }
-  }
 
   var fileContents = $fileContainer.find(".contents")[0];
-
   fileLabel.innerHTML = file.name;
   document.title = file.name;
-  fileContents.innerHTML = "";
-
+  
   $(".file-control").each(function(i, it) {
     $(it).removeClass("hidden");
   });
-  $fileContainer.addClass("loading");
 
-  $.ajax({
-    method: "get",
-    url: file.url,
-    dataType: "text"
-  })
-  .done(function(data) {
-    fileContents.innerHTML = data;
+  if (file.type) {
+    console.log("opening type", file.type);
 
-    fileContents.className = "contents highlight lang-" + file.ext;
+    var mediaType = file.type.split("/")[0];
 
-    hljs.highlightBlock(fileContents);
-  })
-  .fail(function(_, err) {
-    alert(err);
-  })
-  .always(function() {
-    $fileContainer.removeClass("loading");
-  });
+    if (mediaType == "image") {
+      fileContents.innerHTML = '<img class="img-responsive center-block" src="' + file.url + '"/>';
+    } else /*if (mediaType == "text")*/ {
+      fileContents.innerHTML = "";
+
+      $fileContainer.addClass("loading");
+
+      $.ajax({
+        method: "get",
+        url: file.url,
+        dataType: "text"
+      })
+      .done(function(data) {
+        fileContents.innerHTML = data.replace(/&/g, "&amp;")
+          .replace(/>/g, "&gt;")
+          .replace(/</g, "&lt;");
+
+        fileContents.className = "contents highlight lang-" + file.ext;
+
+        hljs.highlightBlock(fileContents);
+      })
+      .fail(function(_, err) {
+        alert(err);
+      })
+      .always(function() {
+        $fileContainer.removeClass("loading");
+      });
+    }
+  }
 }
 
 function addDirEntry(it) {
@@ -245,8 +249,8 @@ $(document).ready(function() {
   </div>
 
   <h4>
-    <%= @project.title %>
-    <small id="fileLabel"></small>
+    <small><%= @project.title %></small>
+    <span id="fileLabel"></span>
   </h4>
 </div>
 

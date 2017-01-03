@@ -11,7 +11,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :projects do
+  resources :projects, :except => [:delete] do
     member do
       post "sync"
       get "dir"
