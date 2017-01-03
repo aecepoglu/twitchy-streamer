@@ -45,6 +45,25 @@ class ProjectsController < ApplicationController
     end
   end
 
+  def get_file_info(key, prefix, bucketUrl)
+    path = key[(prefix.length + 1)..-1]
+
+    dir = File.dirname(path)
+    ext = File.extname(path)[1..-1] || ""
+    types = MIME::Types.type_for(ext)
+
+    file = {
+      name: File.basename(path),
+      dir: dir == "." ? nil : dir,
+      url: File.join(bucketUrl, key),
+      ext: ext,
+      type: types.length >= 1 ? types[0].to_s : "text/plain"
+    }
+
+    return file
+  end
+  
+
   def dir
     resp = nil
 
@@ -54,7 +73,7 @@ class ProjectsController < ApplicationController
       prefix = params[:id].to_s
       resp = s3.list_objects_v2({
         bucket: MyS3Client.bucketName,
-        prefix: prefix
+        prefix: prefix + "/"
       })
     rescue Aws::Errors::MissingRegionError,
         Aws::Errors::MissingCredentialsError,
@@ -67,31 +86,9 @@ class ProjectsController < ApplicationController
     files = []
     bucketUrl = MyS3Client.bucketUrl
 
-    resp.contents.each do |x|
-      path = x.key[(prefix.length + 1)..-1]
-
-      if path == ""
-        next
-      end
-
-      dir = File.dirname(path)
-
-      file = {
-        name: File.basename(path),
-        dir: dir == "." ? nil : dir
-      }
-
-      if path[-1] != "/"
-        ext = File.extname(path)[1..-1] || ""
-        types = MIME::Types.type_for(ext)
-
-        file["url"] = bucketUrl + "/" + x.key
-        file["ext"] = ext
-        file["type"] = types.length >= 1 ? types[0].to_s : "text/plain"
-      end
-
-      files.push(file)
-    end
+    files = resp.contents.map { |x|
+      get_file_info(x.key, prefix, bucketUrl)
+    }
 
     render json: files
   end
@@ -192,6 +189,15 @@ class ProjectsController < ApplicationController
       render plain: "aws error", status: 500
       return
     end
+
+    ActionCable.server.broadcast("project-#{project.hashid}", 
+      {method: params[:method]}.merge(get_file_info(
+        File.join(project.hashid, params[:destination]),
+        project.hashid.to_s,
+        MyS3Client.bucketUrl
+      ))
+    )
+    project.touch
 
     render plain: "ok"
   end

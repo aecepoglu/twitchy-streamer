@@ -4,7 +4,7 @@
   <% @projects.each do |proj| %>
   <li>
     <%= proj.title %>
-    <%= link_to "Show", project_path(proj) %>
+    <%= link_to "Show", project_path(proj.hashid) %>
   </li>
   <% end %>
 </ul>

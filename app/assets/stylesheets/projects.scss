@@ -2,4 +2,31 @@
 // They will automatically be included in application.css.
 // You can use Sass (SCSS) here: http://sass-lang.com/
 
-@import "solarized-dark"
+@import "solarized-dark";
+@import "loading-anim";
+
+pre {
+  border-color: #464545;
+  background-color: inherit;
+}
+
+.clickable {
+  cursor: pointer
+}
+
+.file-icon {
+  margin-right: 1em
+}
+
+.file-button {
+  margin-left: 0.5em;
+}
+
+.hidden, .file-control {
+  display: none !important;
+}
+
+.align-content-bottom {
+  display: flex;
+  align-items: flex-end;
+}

@@ -20,10 +20,8 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
   test "dir should list files successfully" do
     @s3.stub_responses(:list_objects_v2, {
       contents: [
-        {key: "my-proj-id/"},
         {key: "my-proj-id/file1.js"},
         {key: "my-proj-id/file2"},
-        {key: "my-proj-id/folder1/"},
         {key: "my-proj-id/folder1/file3.py"}
       ]
     })
@@ -40,7 +38,6 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       assert_equal JSON.generate([
         {url: "#{urlPrefix}/file1.js", name: "file1.js", dir: nil, ext: "js", type: "application/javascript"},
         {url: "#{urlPrefix}/file2", name: "file2", dir: nil, ext: "", type: "text/plain"},
-        {name: "folder1", dir: nil},
         {url: "#{urlPrefix}/folder1/file3.py", name: "file3.py", dir: "folder1", ext: "py", type: "application/x-python"}
       ].map(&sorter)), JSON.generate(JSON.parse(@response.body).map(&sorter))
     end
