@@ -1,4 +1,4 @@
 # This file will be overwritten by the continuous deployment script
 # It should be changed and commited to git only when its format changes
 date: 2000-12-31
-version: "0.0"
+version: "0.0.0"

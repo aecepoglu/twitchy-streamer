@@ -167,14 +167,16 @@ class ProjectsController < ApplicationController
       s3 = MyS3Client.get
 
       case params[:method]
-        when "create"
+        when "created"
           sync_create(s3, params, project)
-        when "delete"
+        when "modified"
+          sync_create(s3, params, project)
+        when "deleted"
           sync_delete(s3, params, project)
-        when "move"
+        when "moved"
           sync_move(s3, params, project)
         else
-          render plain: "method parameter must be either 'create', 'delete' or 'move'", status: 400
+          render plain: "method parameter must be either 'created', 'delete' or 'move', 'modified'", status: 400
           return
       end
     rescue MyError => e

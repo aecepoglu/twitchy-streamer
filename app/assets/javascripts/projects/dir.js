@@ -1,6 +1,22 @@
 var $dir;
 var activeItem; //currently selected dir item
 
+function showDirUpdatedNotification(show) {
+  if (show) {
+    $(".show-on-dir-update").each(function(i, it) {
+      $(it).removeClass("hidden");
+    });
+
+    $("#refreshDirButton").addClass("text-warning");
+  } else {
+    $(".show-on-dir-update").each(function(i, it) {
+      $(it).addClass("hidden");
+    });
+
+    $("#refreshDirButton").removeClass("text-warning");
+  }
+}
+
 function fileEquals(a, b) {
   return a && b && a.dir == b.dir && a.name == b.name;
 }
@@ -97,6 +113,8 @@ function addDirEntry(it, container) {
 function listFiles() {
   $dir.addClass("loading");
   var container = $dir.find(".contents")[0];
+
+  showDirUpdatedNotification(false);
 
   $.ajax({
     method: "get",

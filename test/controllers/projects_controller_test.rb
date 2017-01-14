@@ -50,7 +50,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       })
 
       post sync_project_path(id: @projId), params: {
-        method: "create",
+        method: "created",
         key: "password-two",
         destination: "sample.js",
         file: fixture_file_upload("test/fixtures/files/sample.js", "application/javascript"),
@@ -71,7 +71,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response 400
   end
 
-  ["create", "delete", "move"].each do |method|
+  ["created", "deleted", "moved", "modified"].each do |method|
     test "sync:#{method} should 404 if project can't be found" do
       post sync_project_path(id: "nonexistent-id"), params: {
         method: method,
@@ -109,7 +109,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
 
     test "sync:#{method} should 400 if destination parameter is not given" do
       post sync_project_path(id: @projId), params: {
-        method: "create",
+        method: "created",
         key: "password-two",
         file: fixture_file_upload("test/fixtures/files/sample.js", "application/javascript"),
       }
@@ -120,7 +120,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
 
   test "sync:create should 400 if file parameter is not given" do
       post sync_project_path(id: @projId), params: {
-        method: "create",
+        method: "created",
         key: "password-two",
         destination: "sample.js"
       }
@@ -133,7 +133,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       @s3.stub_responses(:put_object, "an error")
 
       post sync_project_path(id: @projId), params: {
-        method: "create",
+        method: "created",
         key: "password-two",
         destination: "sample.js",
         file: fixture_file_upload("test/fixtures/files/sample.js", "application/javascript"),
@@ -146,7 +146,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
 
   test "sync:move should 400 if source parameter is not given" do
     post sync_project_path(id: @projId), params: {
-      method: "move",
+      method: "moved",
       key: "password-two",
       destination: "path/to/new-sample.js",
     }
@@ -156,7 +156,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
 
   test "sync:move should 403 if source parameter contains .." do
     post sync_project_path(id: @projId), params: {
-      method: "move",
+      method: "moved",
       key: "password-two",
       source: "../another-project/file.js",
       destination: "file.js"
@@ -168,7 +168,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
   test "sync:move should copy item to new location and remove the old one" do
     MyS3Client.stub :get, @s3 do
       post sync_project_path(id: @projId), params: {
-        method: "move",
+        method: "moved",
         key: "password-two",
         source: "old-sample.js",
         destination: "path/to/new-sample.js"
@@ -195,7 +195,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       @s3.stub_responses(:copy_object, "NoSuchKey")
 
       post sync_project_path(id: @projId), params: {
-        method: "move",
+        method: "moved",
         key: "password-two",
         source: "source.txt",
         destination: "destination.txt"
@@ -208,7 +208,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
   test "sync:delete should delete the given item" do
     MyS3Client.stub :get, @s3 do
       post sync_project_path(id: @projId), params: {
-        method: "delete",
+        method: "deleted",
         key: "password-two",
         destination: "file.txt"
       }
@@ -227,7 +227,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       @s3.stub_responses(:delete_object, "NoSuchKey")
 
       post sync_project_path(id: @projId), params: {
-        method: "delete",
+        method: "deleted",
         destinatio: "file.txt"
       }
 

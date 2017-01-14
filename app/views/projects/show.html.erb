@@ -29,8 +29,12 @@ App.cable.subscriptions.create({channel: "ProjectsChannel", id: PROJECT_ID}, {
     console.debug(msg);
 
     renderLastUpdateTime("projectUpdateTime", new Date());
-    if (msg.method == "create" && fileEquals(currentFile, msg)) {
+    if ((msg.method == "created" || msg.method == "modified")&& fileEquals(currentFile, msg)) {
       showFileVersionNotification(true);
+    }
+
+    if (msg.method != "modified") {
+      showDirUpdatedNotification(true);
     }
   }
 });
@@ -78,7 +82,10 @@ App.cable.subscriptions.create({channel: "ProjectsChannel", id: PROJECT_ID}, {
       <time class="timeago" id="projectUpdateTime">some time ago</time>
     </small></span>
 
-    <a class="glyphicon glyphicon-refresh file-button clickable" onclick="listFiles()"></a>
+    <span class="show-on-dir-update hidden text-warning">
+      new version exists
+    </span>
+    <a id="refreshDirButton" class="glyphicon glyphicon-refresh file-button clickable" onclick="listFiles()"></a>
   </div>
 
   <h4>
