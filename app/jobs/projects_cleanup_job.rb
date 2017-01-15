@@ -4,12 +4,12 @@ class ProjectsCleanupJob < ApplicationJob
   queue_as :default
 
   def perform()
-    logger.tagged("cleanup") { logger.debug "ran at #{Time.now}" }
+    puts "cleanup ran at #{Time.now}"
 
     Project.where("updated_at < :date", {date: Time.now - 48*3600}).find_each do |project|
       hashid = project.hashid
 
-      logger.tagged("cleanup") { logger.info "PURGE id=#{hashid}" }
+      puts "cleanup PURGE id=#{hashid}"
 
       project.destroy
 
