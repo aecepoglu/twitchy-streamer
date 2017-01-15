@@ -33,7 +33,7 @@ class ProjectsCleanupJobTest < ActiveJob::TestCase
 
   test "deletes records untouched more than 5 days" do
     lengthBefore = Project.count
-    DELETE_DAYS = 2
+    DELETE_DAYS = 7
 
     @s3.stub_responses(:list_objects_v2, {
       contents: [

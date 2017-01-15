@@ -4,12 +4,12 @@ class ProjectsCleanupJob < ApplicationJob
   queue_as :default
 
   def perform()
-    puts "cleanup ran at #{Time.now}"
+    logger.tagged("cleanup") { logger.debug "ran at #{Time.now}" }
 
     Project.where("updated_at < :date", {date: Time.now - 168*3600}).find_each do |project|
       hashid = project.hashid
 
-      puts "cleanup PURGE id=#{hashid}"
+      logger.tagged("cleanup") { logger.debug "PURGE id=#{hashid}" }
 
       s3 = MyS3Client.get
 
@@ -18,16 +18,14 @@ class ProjectsCleanupJob < ApplicationJob
         prefix: hashid
       })
 
-      if resp.contents.length == 0
-        next
+      if resp.contents.length > 0
+        s3.delete_objects({
+          bucket: MyS3Client.bucketName,
+          delete: {
+            objects: resp.contents.map { |it| { key: it.key } }
+          }
+        })
       end
-
-      s3.delete_objects({
-        bucket: MyS3Client.bucketName,
-        delete: {
-          objects: resp.contents.map { |it| { key: it.key } }
-        }
-      })
 
       project.destroy
     end
