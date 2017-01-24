@@ -43,6 +43,10 @@ class ProjectsController < ApplicationController
     if params.has_key?("key")
       @key = params[:key]
     end
+
+    if params.has_key?("file")
+      @file = params[:file]
+    end
   end
 
   def get_file_info(key, prefix, bucketUrl)
@@ -201,6 +205,6 @@ class ProjectsController < ApplicationController
     )
     project.touch
 
-    render plain: "ok"
+    render plain: url_for(action: "show", id: project.hashid) + "?file=" + params[:destination]
   end
 end

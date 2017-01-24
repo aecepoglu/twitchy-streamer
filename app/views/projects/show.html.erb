@@ -20,7 +20,7 @@ $(document).ready(function() {
   });
 
   renderLastUpdateTime("projectUpdateTime", new Date(<%= @project.updated_at.to_i * 1000 %>));
-  listFiles();
+  listFiles(<% if @file then %>"<%= @file %>"<% end %>);
 });
 
 App.cable.subscriptions.create({channel: "ProjectsChannel", id: PROJECT_ID}, {

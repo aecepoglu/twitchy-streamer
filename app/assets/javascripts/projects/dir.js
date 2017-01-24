@@ -61,6 +61,14 @@ function toggleDir(ev) {
   hideChildren(elem, isOpen);
 }
 
+function selectDirItem(li) {
+  if (activeItem) {
+    $(activeItem).removeClass("active");
+  }
+  li.className += " active";
+  activeItem = li;
+}
+
 function addDirEntry(it, container) {
   var li = document.createElement("a");
   li.className = "list-group-item clickable";
@@ -73,11 +81,7 @@ function addDirEntry(it, container) {
     li.onclick = function() {
       openFile(it);
 
-      if (activeItem) {
-        $(activeItem).removeClass("active");
-      }
-      li.className += " active";
-      activeItem = li;
+      selectDirItem(li);
     }
   } else {
     li.className += " dir-open";
@@ -110,7 +114,7 @@ function addDirEntry(it, container) {
   return li;
 }
 
-function listFiles() {
+function listFiles(shownFile) {
   $dir.addClass("loading");
   var container = $dir.find(".contents")[0];
 
@@ -129,7 +133,24 @@ function listFiles() {
 
     list.forEach(function(file) {
       addDirEntry(file, container);
+      console.log(file)
     });
+
+    if (shownFile) {
+      var matches = list.filter(function(it) {
+        return shownFile == ((it.dir ? (it.dir + "/") : "") + it.name);
+      });
+
+      if (matches.length < 1) {
+        confirm("The file " + shownFile + " couldn't be found.\nIt may have been deleted");
+      } else if (matches.length > 1) {
+        alert("multiple matching files found. This must be an error.");
+      } else {
+        openFile(matches[0]);
+
+	selectDirItem(document.getElementById("p-" + shownFile));
+      }
+    }
   })
   .fail(function(err) {
     if (err.status >= 500) {

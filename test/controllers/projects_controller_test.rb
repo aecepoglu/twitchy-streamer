@@ -57,7 +57,6 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    assert_equal "ok", @response.body
     assert_response :success
   end
 
