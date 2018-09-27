@@ -6,7 +6,7 @@ class ProjectsCleanupJob < ApplicationJob
   def perform()
     logger.tagged("cleanup") { logger.debug "ran at #{Time.now}" }
 
-    Project.where("updated_at < :date", {date: Time.now - 168*3600}).find_each do |project|
+    Project.where("updated_at < :date", {date: Time.now - 1344*3600}).find_each do |project|
       hashid = project.hashid
 
       logger.tagged("cleanup") { logger.debug "PURGE id=#{hashid}" }
